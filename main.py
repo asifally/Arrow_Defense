@@ -34,6 +34,19 @@ class Character():
 
     def get_height(self):
         return self.character_img.get_height()
+
+class Arrow():
+    def __intit__(self, x, y):
+        self.x = x
+        self.y = y
+        self.arrow_img = ARROW_IMG
+        self.mask = pygame.mask.from_surface(self.arrow_img)
+    def draw(self, window):
+        window.blit(self.arrow_img, (self.x, self.y))
+    def move(self, xvel, yvel):
+        self.x += xvel
+        self.y += yvel
+
 class Enemy(Character):
     def __init__(self, x, y, health=100):
         super().__init__(x, y, health)
