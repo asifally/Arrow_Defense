@@ -10,7 +10,7 @@ WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Arrow Defense")
 
 # Load images
-PLAYER_IMG = pygame.image.load(os.path.join("assets", "whitePlayer2.png"))
+PLAYER_IMG = pygame.image.load(os.path.join("assets", "whitePlayer.png"))
 ARROW_IMG = pygame.image.load(os.path.join("assets", "arrow_img.png"))
 ENEMY_IMG = pygame.image.load(os.path.join("assets", "enemy_img.png"))
 # Background image
@@ -35,6 +35,15 @@ class Character():
     def get_height(self):
         return self.character_img.get_height()
 
+    def flip(self):
+        self.character_img = pygame.transform.flip(self.character_img, True, False)
+
+    def get_direction(self):
+        return self.direction
+
+    def set_direction(self, direction):
+        self.direction = direction
+
 class Arrow():
     def __intit__(self, x, y):
         self.x = x
@@ -52,6 +61,7 @@ class Enemy(Character):
         super().__init__(x, y, health)
         self.character_img = ENEMY_IMG
         self.mask = pygame.mask.from_surface(self.character_img)
+        self.direction = ""
     def move(self, xvel, yvel):
         self.x += xvel
         self.y += yvel
@@ -64,6 +74,8 @@ class Player(Character):
         self.arrow_img = ARROW_IMG
         self.mask = pygame.mask.from_surface(self.character_img)
         self.max_health = health
+        self.direction = "RIGHT" 
+    
 
 def main():
     run = True
@@ -78,9 +90,12 @@ def main():
     enemy_vel = 1
 
     main_font = pygame.font.SysFont("comicsans", 50)
-    loss_font = pygame.font.SysFont("comicsans", 60)
+    lost_font = pygame.font.SysFont("comicsans", 60)
 
-    player = Player(WIDTH/2, HEIGHT/2)
+    player = Player(WIDTH/2 - PLAYER_IMG.get_width()/2, 300)
+
+    lost = False
+    lost_count = 0
 
     def redraw_window():
         WIN.blit(BG, (0, 0))
@@ -97,12 +112,25 @@ def main():
         WIN.blit(score_label, (WIDTH - score_label.get_width() - 10, 10))
         WIN.blit(level_label, (WIDTH/2 - level_label.get_width()/2, 10))
 
+        if lost:
+            lost_label = lost_font.render(f"You lost! Score: {score}", 1, (255, 255, 255))
+            WIN.blit(lost_label, (WIDTH/2 - lost_label.get_width()/2, 300))
         
         pygame.display.update()
 
-
+    
     while run:
         clock.tick(FPS) # Runs at a specific rate regardless of hardware
+        redraw_window()
+        
+        if lives <= 0 or player.health <= 0:
+            lost = True
+            lost_count += 1
+        if lost:
+            if lost_count > FPS * 5:
+                run = False
+            else:
+                continue # Go back to the beginning of the loop
 
         # Spawning the enemies in
         if len(enemies) == 0:
@@ -118,31 +146,55 @@ def main():
                 enemy = Enemy(random.choice(xRange), random.choice(yRange))
                 enemies.append(enemy)
 
-        redraw_window()
         # Exits the window when you press the X button
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-
+        
         keys = pygame.key.get_pressed()
         if keys[pygame.K_a] and player.x - player_vel > 0: # left
             player.x -= player_vel
+            if player.get_direction() == "RIGHT":
+                player.flip()
+            player.set_direction("LEFT")
         if keys[pygame.K_w] and player.y - player_vel > 0: # up
             player.y -= player_vel
         if keys[pygame.K_d] and player.x + player_vel + player.get_width() < WIDTH: # right
             player.x += player_vel
+            if player.get_direction() == "LEFT":
+                player.flip()
+                
+            player.set_direction("RIGHT")
         if keys[pygame.K_s] and player.y + player_vel + player.get_height() < HEIGHT: # down
             player.y += player_vel
         
         # Moving the enemies towards the player
-        for enemy in enemies:
+        for enemy in enemies[:]:
             if enemy.x >= player.x and enemy.y >= player.y:
-                enemy.move(-enemy_vel, -enemy_vel)
+                enemy.move(-enemy_vel, -enemy_vel) # Move up and left
+                if enemy.get_direction() == "RIGHT":
+                    enemy.flip()
+                enemy.set_direction("LEFT")
             if enemy.x >= player.x and enemy.y <= player.y:
-                enemy.move(-enemy_vel, enemy_vel)
+                enemy.move(-enemy_vel, enemy_vel) # Move down and left
+                if enemy.get_direction() == "RIGHT":
+                    enemy.flip()
+                enemy.set_direction("LEFT")
             if enemy.x <= player.x and enemy.y <= player.y:
-                enemy.move(enemy_vel, enemy_vel)
+                enemy.move(enemy_vel, enemy_vel) # Move down and right
+                if enemy.get_direction() == "LEFT":
+                    enemy.flip()
+                enemy.set_direction("RIGHT")
             if enemy.x <= player.x and enemy.y >= player.y:
-                enemy.move(enemy_vel, -enemy_vel)
+                enemy.move(enemy_vel, -enemy_vel) # Move up and right
+                if enemy.get_direction() == "LEFT":
+                    enemy.flip()
+                enemy.set_direction("RIGHT")
+            
+            if player.x <= enemy.x <= player.x + 10 and player.y <= enemy.y <= player.y + 10:
+                lives -= 1
+                enemies.remove(enemy)  # Remove the enemy from existence when it makes contact with the player          
+            # Remove enemy from list if an arrow hits an enemy
+                # enemies.remove(enemy)
                 
 main()
