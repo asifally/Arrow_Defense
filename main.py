@@ -15,7 +15,7 @@ ARROW_IMG = pygame.image.load(os.path.join("assets", "player_arrow.png"))
 ENEMY_IMG = pygame.image.load(os.path.join("assets", "enemy_img.png"))
 ENEMY_ARROW_IMG = pygame.image.load(os.path.join("assets", "enemy_arrow.png"))
 # Background image
-BG = pygame.transform.scale(pygame.image.load(os.path.join("assets", "background-black.png")), (WIDTH, HEIGHT))
+BG = pygame.transform.scale(pygame.image.load(os.path.join("assets", "bg.png")), (WIDTH, HEIGHT))
 
 class Character():
     COOLDOWN = 30 # Half a second
