@@ -148,7 +148,8 @@ class Player(Character):
                 for obj in objs:
                     if arrow.collision(obj):
                         objs.remove(obj)
-                        self.arrows_right.remove(arrow)
+                        if arrow in self.arrows_right:
+                            self.arrows_right.remove(arrow)
                         score_incrementor += 1
         return score_incrementor
     def move_arrows_left(self, vel, objs):
@@ -162,15 +163,25 @@ class Player(Character):
                 for obj in objs:
                     if arrow.collision(obj):
                         objs.remove(obj)
-                        self.arrows_left.remove(arrow)
+                        if arrow in self.arrows_left:
+                            self.arrows_left.remove(arrow)
                         score_incrementor += 1
         return score_incrementor
+    
+    def draw(self, window):
+        super().draw(window)
+        self.healthbar(window)
+
+    def healthbar(self, window):
+        pygame.draw.rect(window, (255,0,0), (self.x + self.character_img.get_width()/2, self.y + self.character_img.get_height() - 20, self.character_img.get_width()/5, 2))
+        pygame.draw.rect(window, (0,255,0), (self.x + self.character_img.get_width()/2, self.y + self.character_img.get_height() - 20, (self.character_img.get_width() * (self.health/self.max_health))/5, 2))
+
 
 
 def main():
     run = True
     FPS = 60
-    lives = 5
+    lives = 3
     level = 0
     score = 0
     player_vel = 5
@@ -178,7 +189,7 @@ def main():
     enemies = []
     wave_length = 5
     enemy_vel = 1
-    laser_vel = 4
+    laser_vel = 5
 
     main_font = pygame.font.SysFont("comicsans", 50)
     lost_font = pygame.font.SysFont("comicsans", 60)
@@ -243,21 +254,21 @@ def main():
                 run = False
         
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_a] and player.x - player_vel > 0: # left
+        if keys[pygame.K_a] and player.x - player_vel + 50 > 0: # left
             player.x -= player_vel
             if player.get_direction() == "RIGHT":
                 player.flip()
                 player.flip_arrow()
             player.set_direction("LEFT")
-        if keys[pygame.K_w] and player.y - player_vel > 0: # up
+        if keys[pygame.K_w] and player.y - player_vel + 50 > 0: # up
             player.y -= player_vel
-        if keys[pygame.K_d] and player.x + player_vel + player.get_width() < WIDTH: # right
+        if keys[pygame.K_d] and player.x + player_vel + player.get_width() - 50 < WIDTH: # right
             player.x += player_vel
             if player.get_direction() == "LEFT":
                 player.flip()
                 player.flip_arrow()
             player.set_direction("RIGHT")
-        if keys[pygame.K_s] and player.y + player_vel + player.get_height() < HEIGHT: # down
+        if keys[pygame.K_s] and player.y + player_vel + player.get_height() - 15 < HEIGHT: # down
             player.y += player_vel
         if keys[pygame.K_SPACE]: #Spacebar
             if player.get_direction() == "RIGHT":
@@ -297,18 +308,40 @@ def main():
                 enemy.set_direction("RIGHT")
                 enemy.move_arrows_right(laser_vel, player)
             
-            # Some enemies can shoot
+            # Some enemies can shoot randomly
             if random.randrange(0, 15 * FPS) == 1:
                 if enemy.get_direction() == "RIGHT":
                     enemy.shoot_right()
                 else:
                     enemy.shoot_left()
 
-            if player.x <= enemy.x <= player.x + 10 and player.y <= enemy.y <= player.y + 10:
+            '''if player.x <= enemy.x <= player.x + 10 and player.y <= enemy.y <= player.y + 10:
                 lives -= 1
-                enemies.remove(enemy)  # Remove the enemy from existence when it makes contact with the player          
-        
+                enemies.remove(enemy) ''' # Remove the enemy from existence when it makes contact with the player          
+            if collide(enemy, player):
+                player.health -= 10
+                enemies.remove(enemy)
+                if player.health <= 0:
+                    lives -= 1
+                    if lives >= 1:
+                        player.health = 100
+
         score += player.move_arrows_right(laser_vel, enemies)
         score += player.move_arrows_left(-laser_vel, enemies)
-                
-main()
+
+def main_menu():
+    run = True
+    title_font = pygame.font.SysFont('comicsans', 50)
+    while run:
+        WIN.blit(BG, (0, 0))
+        title_label = title_font.render("Press the mouse button to begin...", 1, (255, 255, 255))
+        WIN.blit(title_label, (WIDTH/2 - title_label.get_width()/2, 300))
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                main()
+    pygame.quit()
+
+main_menu()
