@@ -11,8 +11,9 @@ pygame.display.set_caption("Arrow Defense")
 
 # Load images
 PLAYER_IMG = pygame.image.load(os.path.join("assets", "whitePlayer.png"))
-ARROW_IMG = pygame.image.load(os.path.join("assets", "arrow_img.png"))
+ARROW_IMG = pygame.image.load(os.path.join("assets", "player_arrow.png"))
 ENEMY_IMG = pygame.image.load(os.path.join("assets", "enemy_img.png"))
+ENEMY_ARROW_IMG = pygame.image.load(os.path.join("assets", "enemy_arrow.png"))
 # Background image
 BG = pygame.transform.scale(pygame.image.load(os.path.join("assets", "background-black.png")), (WIDTH, HEIGHT))
 
@@ -122,6 +123,7 @@ class Enemy(Character):
         self.character_img = ENEMY_IMG
         self.mask = pygame.mask.from_surface(self.character_img)
         self.direction = ""
+        self.arrow_img = ENEMY_ARROW_IMG
     def move(self, xvel, yvel):
         self.x += xvel
         self.y += yvel
@@ -270,27 +272,38 @@ def main():
                 enemy.move(-enemy_vel, -enemy_vel) # Move up and left
                 if enemy.get_direction() == "RIGHT":
                     enemy.flip()
+                    enemy.flip_arrow()
                 enemy.set_direction("LEFT")
                 enemy.move_arrows_left(-laser_vel, player)
             if enemy.x >= player.x and enemy.y <= player.y:
                 enemy.move(-enemy_vel, enemy_vel) # Move down and left
                 if enemy.get_direction() == "RIGHT":
                     enemy.flip()
+                    enemy.flip_arrow()
                 enemy.set_direction("LEFT")
                 enemy.move_arrows_left(-laser_vel, player)
             if enemy.x <= player.x and enemy.y <= player.y:
                 enemy.move(enemy_vel, enemy_vel) # Move down and right
                 if enemy.get_direction() == "LEFT":
                     enemy.flip()
+                    enemy.flip_arrow()
                 enemy.set_direction("RIGHT")
                 enemy.move_arrows_right(laser_vel, player)
             if enemy.x <= player.x and enemy.y >= player.y:
                 enemy.move(enemy_vel, -enemy_vel) # Move up and right
                 if enemy.get_direction() == "LEFT":
                     enemy.flip()
+                    enemy.flip_arrow()
                 enemy.set_direction("RIGHT")
                 enemy.move_arrows_right(laser_vel, player)
             
+            # Some enemies can shoot
+            if random.randrange(0, 15 * FPS) == 1:
+                if enemy.get_direction() == "RIGHT":
+                    enemy.shoot_right()
+                else:
+                    enemy.shoot_left()
+
             if player.x <= enemy.x <= player.x + 10 and player.y <= enemy.y <= player.y + 10:
                 lives -= 1
                 enemies.remove(enemy)  # Remove the enemy from existence when it makes contact with the player          
