@@ -17,17 +17,65 @@ ENEMY_IMG = pygame.image.load(os.path.join("assets", "enemy_img.png"))
 BG = pygame.transform.scale(pygame.image.load(os.path.join("assets", "background-black.png")), (WIDTH, HEIGHT))
 
 class Character():
+    COOLDOWN = 30 # Half a second
     def __init__(self, x, y, health=100):
         self.x = x
         self.y = y
         self.health = health
         self.character_img = None
         self.arrow_img = None
-        self.arrows = []
+        self.arrows_right = []
+        self.arrows_left = []
         self.cool_down_counter = 0
 
     def draw(self, window):
         window.blit(self.character_img, (self.x, self.y))
+        for arrow in self.arrows_right:
+            arrow.draw(window)
+        for arrow in self.arrows_left:
+            arrow.draw(window)
+
+    def move_arrows_right(self, vel, obj):
+        self.cooldown()
+        for arrow in self.arrows_right:
+            arrow.move(vel)
+            if arrow.off_screen(WIDTH, HEIGHT):
+                self.arrows_right.remove(arrow)
+            elif arrow.collision(obj):
+                obj.health -= 10
+                self.arrows_right.remove(arrow)
+    def move_arrows_left(self, vel, obj):
+        self.cooldown()
+        for arrow in self.arrows_left:
+            arrow.move(vel)
+            if arrow.off_screen(WIDTH, HEIGHT):
+                self.arrows_left.remove(arrow)
+            elif arrow.collision(obj):
+                obj.health -= 10
+                self.arrows_left.remove(arrow)
+
+    def cooldown(self):
+        # If counter is greater than half a second
+        if self.cool_down_counter >= self.COOLDOWN:
+            # Set the counter to 0
+            self.cool_down_counter = 0
+        # If the counter is greater than 0
+        elif self.cool_down_counter > 0:
+            # Increment it
+            self.cool_down_counter += 1
+
+    def shoot_right(self):
+        if self.cool_down_counter == 0:
+            arrow = Arrow(self.x, self.y, self.arrow_img)
+            self.arrows_right.append(arrow)
+            self.cool_down_counter = 1
+    def shoot_left(self):
+        if self.cool_down_counter == 0:
+            arrow = Arrow(self.x, self.y, self.arrow_img)
+            self.arrows_left.append(arrow)
+            self.cool_down_counter = 1
+    def flip_arrow(self):
+        self.arrow_img = pygame.transform.flip(self.arrow_img, True, False)
 
     def get_width(self):
         return self.character_img.get_width()
@@ -45,16 +93,28 @@ class Character():
         self.direction = direction
 
 class Arrow():
-    def __intit__(self, x, y):
+    def __init__(self, x, y, img):
         self.x = x
         self.y = y
-        self.arrow_img = ARROW_IMG
-        self.mask = pygame.mask.from_surface(self.arrow_img)
+        self.img = img
+        self.mask = pygame.mask.from_surface(self.img)
+
     def draw(self, window):
-        window.blit(self.arrow_img, (self.x, self.y))
-    def move(self, xvel, yvel):
+        window.blit(self.img, (self.x, self.y))
+
+    def move(self, xvel):
         self.x += xvel
-        self.y += yvel
+    
+    def off_screen(self, width, height):
+        return not(0 <= self.x <= width and 0 <= self.y <= height)
+
+    def collision(self, obj):
+        return collide(obj, self)
+
+def collide(obj1, obj2):
+    offset_x = int(obj2.x - obj1.x)
+    offset_y = int(obj2.y - obj1.y)
+    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None # Returns (x, y)
 
 class Enemy(Character):
     def __init__(self, x, y, health=100):
@@ -75,7 +135,35 @@ class Player(Character):
         self.mask = pygame.mask.from_surface(self.character_img)
         self.max_health = health
         self.direction = "RIGHT" 
-    
+    def move_arrows_right(self, vel, objs):
+        self.cooldown()
+        score_incrementor = 0
+        for arrow in self.arrows_right:
+            arrow.move(vel)
+            if arrow.off_screen(WIDTH, HEIGHT):
+                self.arrows_right.remove(arrow)
+            else:
+                for obj in objs:
+                    if arrow.collision(obj):
+                        objs.remove(obj)
+                        self.arrows_right.remove(arrow)
+                        score_incrementor += 1
+        return score_incrementor
+    def move_arrows_left(self, vel, objs):
+        self.cooldown()
+        score_incrementor = 0
+        for arrow in self.arrows_left:
+            arrow.move(vel)
+            if arrow.off_screen(WIDTH, HEIGHT):
+                self.arrows_left.remove(arrow)
+            else:
+                for obj in objs:
+                    if arrow.collision(obj):
+                        objs.remove(obj)
+                        self.arrows_left.remove(arrow)
+                        score_incrementor += 1
+        return score_incrementor
+
 
 def main():
     run = True
@@ -88,6 +176,7 @@ def main():
     enemies = []
     wave_length = 5
     enemy_vel = 1
+    laser_vel = 4
 
     main_font = pygame.font.SysFont("comicsans", 50)
     lost_font = pygame.font.SysFont("comicsans", 60)
@@ -156,6 +245,7 @@ def main():
             player.x -= player_vel
             if player.get_direction() == "RIGHT":
                 player.flip()
+                player.flip_arrow()
             player.set_direction("LEFT")
         if keys[pygame.K_w] and player.y - player_vel > 0: # up
             player.y -= player_vel
@@ -163,10 +253,16 @@ def main():
             player.x += player_vel
             if player.get_direction() == "LEFT":
                 player.flip()
-                
+                player.flip_arrow()
             player.set_direction("RIGHT")
         if keys[pygame.K_s] and player.y + player_vel + player.get_height() < HEIGHT: # down
             player.y += player_vel
+        if keys[pygame.K_SPACE]: #Spacebar
+            if player.get_direction() == "RIGHT":
+                player.shoot_right()
+            else:
+                player.shoot_left()
+
         
         # Moving the enemies towards the player
         for enemy in enemies[:]:
@@ -175,26 +271,31 @@ def main():
                 if enemy.get_direction() == "RIGHT":
                     enemy.flip()
                 enemy.set_direction("LEFT")
+                enemy.move_arrows_left(-laser_vel, player)
             if enemy.x >= player.x and enemy.y <= player.y:
                 enemy.move(-enemy_vel, enemy_vel) # Move down and left
                 if enemy.get_direction() == "RIGHT":
                     enemy.flip()
                 enemy.set_direction("LEFT")
+                enemy.move_arrows_left(-laser_vel, player)
             if enemy.x <= player.x and enemy.y <= player.y:
                 enemy.move(enemy_vel, enemy_vel) # Move down and right
                 if enemy.get_direction() == "LEFT":
                     enemy.flip()
                 enemy.set_direction("RIGHT")
+                enemy.move_arrows_right(laser_vel, player)
             if enemy.x <= player.x and enemy.y >= player.y:
                 enemy.move(enemy_vel, -enemy_vel) # Move up and right
                 if enemy.get_direction() == "LEFT":
                     enemy.flip()
                 enemy.set_direction("RIGHT")
+                enemy.move_arrows_right(laser_vel, player)
             
             if player.x <= enemy.x <= player.x + 10 and player.y <= enemy.y <= player.y + 10:
                 lives -= 1
                 enemies.remove(enemy)  # Remove the enemy from existence when it makes contact with the player          
-            # Remove enemy from list if an arrow hits an enemy
-                # enemies.remove(enemy)
+        
+        score += player.move_arrows_right(laser_vel, enemies)
+        score += player.move_arrows_left(-laser_vel, enemies)
                 
 main()
