@@ -256,21 +256,21 @@ def main():
                 run = False
         
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_a] or keys[pygame.K_LEFT] and player.x - player_vel + 50 > 0: # left
+        if (keys[pygame.K_a] or keys[pygame.K_LEFT]) and player.x - player_vel + 50 > 0: # left
             player.x -= player_vel
             if player.get_direction() == "RIGHT":
                 player.flip()
                 player.flip_arrow()
             player.set_direction("LEFT")
-        if keys[pygame.K_w] or keys[pygame.K_UP] and player.y - player_vel + 50 > 0: # up
+        if (keys[pygame.K_w] or keys[pygame.K_UP]) and player.y - player_vel + 50 > 0: # up
             player.y -= player_vel
-        if keys[pygame.K_d] or keys[pygame.K_RIGHT] and player.x + player_vel + player.get_width() - 50 < WIDTH: # right
+        if (keys[pygame.K_d] or keys[pygame.K_RIGHT]) and player.x + player_vel + player.get_width() - 50 < WIDTH: # right
             player.x += player_vel
             if player.get_direction() == "LEFT":
                 player.flip()
                 player.flip_arrow()
             player.set_direction("RIGHT")
-        if keys[pygame.K_s] or keys[pygame.K_DOWN] and player.y + player_vel + player.get_height() - 15 < HEIGHT: # down
+        if (keys[pygame.K_s] or keys[pygame.K_DOWN]) and player.y + player_vel + player.get_height() - 15 < HEIGHT: # down
             player.y += player_vel
         if keys[pygame.K_SPACE]: #Spacebar
             if player.get_direction() == "RIGHT":
